@@ -1,0 +1,32 @@
+package main
+
+import (
+	"log"
+	"os"
+	"time"
+
+	clutchcall "github.com/clutchcall/go-sdk/pkg"
+)
+
+func main() {
+	endpoint := getenv("CLUTCHCALL_ENDPOINT", "{{.Endpoint}}")
+	creds := getenv("CLUTCHCALL_CREDENTIALS", "service_account.json")
+
+	client, err := clutchcall.NewClient(endpoint, creds)
+	if err != nil {
+		log.Fatalf("connect %s: %v", endpoint, err)
+	}
+
+	if err := client.Dial("+15550000000", "trunk_demo", "", 60000); err != nil {
+		log.Fatalf("dial: %v", err)
+	}
+	log.Println("dial placed; sleeping 30s for bridge…")
+	time.Sleep(30 * time.Second)
+}
+
+func getenv(k, fallback string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return fallback
+}

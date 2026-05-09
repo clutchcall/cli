@@ -1,0 +1,22 @@
+# {{.Name}} — AI Agent Context
+
+## Goal
+Minimal TypeScript program (Node 20+) that connects to ClutchCall over WebTransport and places an outbound call.
+
+## Runtime
+- Endpoint: `{{.Endpoint}}` (override via `CLUTCHCALL_ENDPOINT`)
+- Auth: pre-signed JWT via `CLUTCHCALL_JWT` (service-account JWT minted by your backend).
+- The SDK ships an Emscripten-compiled WASM core. Do not import the native FFI from Node;
+  use `@clutchcall/sdk` which loads the WASM module for you.
+
+## Editing Rules
+- Audio buffers must be exchanged as `Uint8Array`, never `string`. Emscripten's UTF-8
+  decoder corrupts byte values ≥ 0x80 (audio frames in PCMU/PCMA range).
+- Use `typed_memory_view` exports from the WASM core to read frames. Never round-trip
+  audio through `JSON.stringify`.
+- Do not hand-edit any types in `node_modules/@clutchcall/sdk/dist/serde`. They are
+  regenerated upstream by `apirpc_compiler`.
+
+## Common Tasks
+- Browser variant: see `clutchcall-sdk/typescript/examples/browser_demo.ts`.
+- LLM bridge: see `clutchcall-sdk/typescript/examples/openai_realtime_demux.ts`.

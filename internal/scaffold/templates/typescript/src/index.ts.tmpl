@@ -1,0 +1,22 @@
+import { ClutchCallClient } from '@clutchcall/sdk';
+
+const ENDPOINT = process.env.CLUTCHCALL_ENDPOINT ?? '{{.Endpoint}}';
+const JWT = process.env.CLUTCHCALL_JWT ?? '';
+
+async function main() {
+  if (!JWT) {
+    console.error('CLUTCHCALL_JWT is required (pre-signed service account token).');
+    process.exit(1);
+  }
+
+  const client = new ClutchCallClient(ENDPOINT, JWT, true);
+  await client.connect();
+
+  await client.dial({ to: '+15550000000', trunkId: 'trunk_demo' });
+  console.log('dial placed; bridge audio in your application logic.');
+}
+
+main().catch((err) => {
+  console.error('fatal:', err);
+  process.exit(1);
+});

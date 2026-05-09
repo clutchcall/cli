@@ -1,0 +1,19 @@
+import asyncio
+import os
+
+from clutchcall.client import ClutchCallClient
+
+ENDPOINT = os.environ.get("CLUTCHCALL_ENDPOINT", "{{.Endpoint}}")
+CREDS = os.environ.get("CLUTCHCALL_CREDENTIALS", "service_account.json")
+
+
+async def main() -> None:
+    client = ClutchCallClient(endpoint=ENDPOINT, service_account_path=CREDS)
+    async with client.connect_async():
+        await client.dial(to="+15550000000", trunk_id="trunk_demo")
+        print("dial placed; sleeping 30s for bridge…")
+        await asyncio.sleep(30)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

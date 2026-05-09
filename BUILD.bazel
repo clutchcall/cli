@@ -1,0 +1,5 @@
+filegroup(
+    name = "cli_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
