@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/clutchcall/cli/internal/auth"
@@ -18,7 +19,21 @@ import (
 
 const version = "0.1.0"
 
-const usage = `clutch — ClutchCall SDK developer CLI
+// brand is the user-facing binary name baked in at link time. The
+// Makefile passes -ldflags '-X main.brand=tq' to produce a TeleQuick
+// build; the default `clutch` matches the source-of-truth ClutchCall
+// repo. brandify() rewrites every "clutch " token in help text so
+// every "Usage:" line and example command shows the correct name.
+var brand = "clutch"
+
+func brandify(s string) string {
+	if brand == "clutch" {
+		return s
+	}
+	return strings.ReplaceAll(s, "clutch ", brand+" ")
+}
+
+var usage = brandify(`clutch — ClutchCall SDK developer CLI
 
 Usage:
   clutch <command> [args]
@@ -50,7 +65,7 @@ Examples:
   clutch auth login
   clutch init go my-agent
   clutch docs search "originate trunk"
-`
+`)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -86,7 +101,7 @@ func main() {
 	case "docs":
 		runDocs(os.Args[2:])
 	case "version", "-v", "--version":
-		fmt.Println("clutch", version)
+		fmt.Println(brand, version)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
@@ -100,7 +115,7 @@ func runInit(args []string) {
 	endpoint := fs.String("endpoint", "quic://127.0.0.1:9090", "ClutchCall gateway endpoint")
 	force := fs.Bool("force", false, "Overwrite an existing target directory")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: clutch init <lang> <name> [--endpoint url] [--force]")
+		fmt.Fprintln(os.Stderr, brandify("Usage: clutch init <lang> <name> [--endpoint url] [--force]"))
 		fmt.Fprintln(os.Stderr, "  lang: go | typescript | python")
 		fs.PrintDefaults()
 	}
@@ -141,7 +156,7 @@ func runMigrate(args []string) {
 
 func runDocs(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: clutch docs <overview|search|get-page> [args]")
+		fmt.Fprintln(os.Stderr, brandify("Usage: clutch docs <overview|search|get-page> [args]"))
 		os.Exit(2)
 	}
 	if err := docs.Run(args[0], args[1:]); err != nil {
@@ -150,7 +165,7 @@ func runDocs(args []string) {
 	}
 }
 
-const authUsage = `Usage: clutch auth <subcommand>
+var authUsage = brandify(`Usage: clutch auth <subcommand>
 
 Subcommands:
   login [--token <jwt>] [--timeout 5m]   Authorize the CLI via the portal in your browser
@@ -159,7 +174,7 @@ Subcommands:
   whoami                                  Show the current identity.
 
 The portal URL is taken from $CLUTCH_BASE_URL (default: https://portal.clutchcall.dev).
-`
+`)
 
 func runAuth(args []string) {
 	if len(args) == 0 {
@@ -226,7 +241,7 @@ func runAuthWhoami(_ []string) {
 		os.Exit(1)
 	}
 	if creds == nil {
-		fmt.Fprintln(os.Stderr, "Not logged in. Run `clutch auth login`.")
+		fmt.Fprintln(os.Stderr, brandify("Not logged in. Run `clutch auth login`."))
 		os.Exit(1)
 	}
 	fmt.Println("Base URL:    ", creds.BaseURL)
@@ -248,19 +263,19 @@ func runAuthWhoami(_ []string) {
 		if remaining > 0 {
 			fmt.Printf("Token expires: %s (in %s)\n", exp.Format(time.RFC3339), remaining)
 		} else {
-			fmt.Printf("Token expired: %s — run `clutch auth login` to refresh\n", exp.Format(time.RFC3339))
+			fmt.Printf(brandify("Token expired: %s — run `clutch auth login` to refresh\n"), exp.Format(time.RFC3339))
 		}
 	}
 }
 
 // ─── trunks ─────────────────────────────────────────────────────────────
 
-const trunksUsage = `Usage: clutch trunks <subcommand>
+var trunksUsage = brandify(`Usage: clutch trunks <subcommand>
 
 Subcommands:
   list [--org <id>] [--json]              List trunks for the active org.
   show <id|name> [--org <id>] [--json]    Show one trunk in detail.
-`
+`)
 
 func runTrunks(args []string) {
 	if len(args) == 0 {
@@ -284,7 +299,7 @@ func runTrunks(args []string) {
 		pos, flags := splitPositional(args[1:], 1)
 		_ = fs.Parse(flags)
 		if len(pos) != 1 {
-			fmt.Fprintln(os.Stderr, "Usage: clutch trunks show <id|name> [--org <id>] [--json]")
+			fmt.Fprintln(os.Stderr, brandify("Usage: clutch trunks show <id|name> [--org <id>] [--json]"))
 			os.Exit(2)
 		}
 		if err := trunks.Show(context.Background(), pos[0], *org, *asJSON); err != nil {
@@ -306,14 +321,14 @@ func runDial(args []string) {
 	from := fs.String("from", "", "Caller-ID (E.164); must be in the trunk's allowlist")
 	maxMs := fs.Int("max-ms", 0, "Hard cap on call duration in milliseconds")
 	app := fs.String("app", "",
-		"Dialplan app on answer. Default: AI_BIDIRECTIONAL_STREAM. "+
-			"List all with `clutch dial --list-apps`.")
+		brandify("Dialplan app on answer. Default: AI_BIDIRECTIONAL_STREAM. "+
+			"List all with `clutch dial --list-apps`."))
 	appArgs := fs.String("app-args", "",
 		"Args for --app (AI_BIDIRECTIONAL_STREAM: agent_id; PLAYBACK: wav path; "+
 			"UNPARK_AND_BRIDGE: target call_sid).")
 	agent := fs.String("agent", "",
-		"Shortcut for --app=AI_BIDIRECTIONAL_STREAM --app-args=<agent_id>. "+
-			"List your agents with `clutch agents list`.")
+		brandify("Shortcut for --app=AI_BIDIRECTIONAL_STREAM --app-args=<agent_id>. "+
+			"List your agents with `clutch agents list`."))
 	wsURL := fs.String("ai-ws-url", "", "AI WebSocket URL override (AI_BIDIRECTIONAL_STREAM only)")
 	quicURL := fs.String("ai-quic-url", "", "AI QUIC URL override (AI_BIDIRECTIONAL_STREAM only)")
 	bargePatience := fs.Int("barge-patience-ms", 0, "How long to keep streaming TTS after barge-in detection")
@@ -321,7 +336,7 @@ func runDial(args []string) {
 	asJSON := fs.Bool("json", false, "Emit raw JSON response")
 	listApps := fs.Bool("list-apps", false, "Print supported --app values and exit")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: clutch dial <e164-or-sip-uri> --trunk <id> [flags]")
+		fmt.Fprintln(os.Stderr, brandify("Usage: clutch dial <e164-or-sip-uri> --trunk <id> [flags]"))
 		fs.PrintDefaults()
 	}
 	pos, flags := splitPositional(args, 1)
@@ -374,10 +389,10 @@ func runDial(args []string) {
 		effectiveApp = "AI_BIDIRECTIONAL_STREAM"
 	}
 	if effectiveApp == "AI_BIDIRECTIONAL_STREAM" && *appArgs == "" {
-		fmt.Fprintln(os.Stderr,
+		fmt.Fprintln(os.Stderr, brandify(
 			"AI_BIDIRECTIONAL_STREAM (default) requires an agent.\n"+
 				"  pass --agent <agent_id> (list with `clutch agents list`),\n"+
-				"  or pick a different --app (see `clutch dial --list-apps`).")
+				"  or pick a different --app (see `clutch dial --list-apps`)."))
 		os.Exit(2)
 	}
 
@@ -423,7 +438,7 @@ func runHangup(args []string) {
 		os.Exit(2)
 	}
 	if len(pos) != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: clutch hangup <call_sid> [--org <id>]")
+		fmt.Fprintln(os.Stderr, brandify("Usage: clutch hangup <call_sid> [--org <id>]"))
 		os.Exit(2)
 	}
 	if err := calls.Hangup(context.Background(), pos[0], *org); err != nil {
@@ -442,7 +457,7 @@ func runTransfer(args []string) {
 		os.Exit(2)
 	}
 	if len(pos) != 2 {
-		fmt.Fprintln(os.Stderr, "Usage: clutch transfer <call_sid> <destination> [--org <id>]")
+		fmt.Fprintln(os.Stderr, brandify("Usage: clutch transfer <call_sid> <destination> [--org <id>]"))
 		fmt.Fprintln(os.Stderr, "  destination: E.164 (+15551234567) or SIP URI (sip:user@host)")
 		os.Exit(2)
 	}
@@ -466,7 +481,7 @@ func runMuteUnmute(args []string, mute bool) {
 		os.Exit(2)
 	}
 	if len(pos) != 1 {
-		fmt.Fprintf(os.Stderr, "Usage: clutch %s <call_sid> [--wire] [--org <id>]\n", verb)
+		fmt.Fprintf(os.Stderr, brandify("Usage: clutch %s <call_sid> [--wire] [--org <id>]\n"), verb)
 		os.Exit(2)
 	}
 	var err error
@@ -494,7 +509,7 @@ func runHoldUnhold(args []string, hold bool) {
 		os.Exit(2)
 	}
 	if len(pos) != 1 {
-		fmt.Fprintf(os.Stderr, "Usage: clutch %s <call_sid> [--org <id>]\n", verb)
+		fmt.Fprintf(os.Stderr, brandify("Usage: clutch %s <call_sid> [--org <id>]\n"), verb)
 		os.Exit(2)
 	}
 	var err error
@@ -520,7 +535,7 @@ func runSendDTMF(args []string) {
 		os.Exit(2)
 	}
 	if len(pos) != 2 {
-		fmt.Fprintln(os.Stderr, "Usage: clutch send-dtmf <call_sid> <digit> [--mode rfc2833|info] [--duration-ms 160]")
+		fmt.Fprintln(os.Stderr, brandify("Usage: clutch send-dtmf <call_sid> <digit> [--mode rfc2833|info] [--duration-ms 160]"))
 		os.Exit(2)
 	}
 	if err := calls.SendDTMF(context.Background(), pos[0], *org, pos[1], *mode, *durationMs); err != nil {
